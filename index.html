@@ -115,6 +115,37 @@
         }
         .stat-label { font-size: 0.8rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; }
         .stat-value { font-size: 1.5rem; font-weight: 700; color: #fff; }
+
+        .level-progress-wrap {
+            position: absolute;
+            top: 74px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .level-progress-track {
+            width: 220px;
+            height: 8px;
+            border-radius: 9999px;
+            background: rgba(255,255,255,0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .level-progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.25s ease;
+        }
+        .level-progress-label {
+            font-size: 0.7rem;
+            color: #cbd5e1;
+            letter-spacing: 0.5px;
+        }
         
         .controls-layer {
             position: absolute;
@@ -190,11 +221,15 @@
                 เรียนรู้การแยกประเภทยาเสพติด<br>
                 <b>วิธีเล่น:</b> ใช้ "ปลายนิ้วชี้" ของคุณชี้ไปที่วงกลมหมวดหมู่ที่ถูกต้องเพื่อแยกประเภทยาเสพติดที่ปรากฏตรงกลางจอ
             </p>
-            <div class="grid grid-cols-2 gap-4 text-sm text-left mb-8 bg-black/30 p-4 rounded-xl">
+            <div class="grid grid-cols-2 gap-4 text-sm text-left mb-6 bg-black/30 p-4 rounded-xl">
                 <div><span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span><b>กดประสาท:</b> ทำให้ง่วง ซึม</div>
                 <div><span class="inline-block w-3 h-3 rounded-full bg-yellow-400 mr-2"></span><b>กระตุ้นประสาท:</b> ตื่นตัว ใจสั่น</div>
                 <div><span class="inline-block w-3 h-3 rounded-full bg-purple-500 mr-2"></span><b>หลอนประสาท:</b> เห็นภาพหลอน</div>
                 <div><span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span><b>ผสมผสาน:</b> ออกฤทธิ์หลายแบบ</div>
+            </div>
+            <div id="level-preview" class="text-left text-sm bg-black/20 p-4 rounded-xl mb-2">
+                <div class="font-semibold text-blue-300 mb-2">ความยากจะเพิ่มขึ้นตามเลเวล:</div>
+                <ul id="level-preview-list" class="space-y-1 text-gray-300"></ul>
             </div>
             <button id="btn-start" class="btn-primary">เริ่มเกม (Start Game)</button>
         </div>
@@ -213,7 +248,8 @@
     <div id="game-over-menu" class="ui-layer hidden-ui">
         <div class="glass-panel">
             <h2 class="text-5xl font-bold mb-2 text-red-500">จบเกม!</h2>
-            <p class="text-2xl mb-6">คะแนนของคุณ: <span id="final-score" class="font-bold text-white">0</span></p>
+            <p class="text-2xl mb-2">คะแนนของคุณ: <span id="final-score" class="font-bold text-white">0</span></p>
+            <p class="text-lg mb-6 text-blue-300">ไปถึงเลเวล <span id="final-level" class="font-bold">1</span></p>
             <p id="game-over-reason" class="text-lg text-gray-300 mb-8">หมดเวลาตอบคำถาม</p>
             <button id="btn-restart" class="btn-primary">เล่นอีกครั้ง (Play Again)</button>
         </div>
@@ -235,6 +271,12 @@
                 <span id="hud-time" class="stat-value text-yellow-400">0.0</span>
             </div>
         </div>
+        <div class="level-progress-wrap">
+            <div class="level-progress-track">
+                <div id="level-progress-fill" class="level-progress-fill"></div>
+            </div>
+            <div id="level-progress-label" class="level-progress-label">0 / 5 ถูกต้อง เพื่อขึ้นเลเวลถัดไป</div>
+        </div>
     </div>
 
     <!-- Mouse Controls for Pause/Quit -->
@@ -247,19 +289,23 @@
     <script>
         
         // --- Game Data ---
+        // Each drug has a "tier" (1 = introduced earliest/easiest, 3 = introduced last/hardest)
+        // so that early levels only quiz on a small, clearer set before mixing in trickier items.
         const DRUG_DATABASE = [
-            { name: "ยาบ้า", type: "stimulant", desc: "แอมเฟตามีน" },
-            { name: "ยาไอซ์", type: "stimulant", desc: "เมทแอมเฟตามีนบริสุทธิ์" },
-            { name: "โคเคน", type: "stimulant", desc: "สกัดจากใบโคคา" },
-            { name: "กระท่อม", type: "stimulant", desc: "เคี้ยวใบ/ต้มน้ำ" },
-            { name: "ฝิ่น", type: "depressant", desc: "ยางจากผลฝิ่น" },
-            { name: "มอร์ฟีน", type: "depressant", desc: "สกัดจากฝิ่น ใช้ทางการแพทย์" },
-            { name: "เฮโรอีน", type: "depressant", desc: "ผงขาว รุนแรง" },
-            { name: "ยานอนหลับ", type: "depressant", desc: "ใช้เกินขนาดอันตราย" },
-            { name: "แอลเอสดี (LSD)", type: "hallucinogen", desc: "กระดาษเมา/แสตมป์" },
-            { name: "เห็ดขี้ควาย", type: "hallucinogen", desc: "เห็ดเมา มีสารไซโลไซบิน" },
-            { name: "เคตามีน", type: "hallucinogen", desc: "ยาเค หลอนประสาทรุนแรง" },
-            { name: "กัญชา", type: "mixed", desc: "มีสาร THC/CBD" }
+            { name: "ยาบ้า", type: "stimulant", desc: "แอมเฟตามีน", tier: 1 },
+            { name: "กัญชา", type: "mixed", desc: "มีสาร THC/CBD", tier: 1 },
+            { name: "ยานอนหลับ", type: "depressant", desc: "ใช้เกินขนาดอันตราย", tier: 1 },
+            { name: "แอลเอสดี (LSD)", type: "hallucinogen", desc: "กระดาษเมา/แสตมป์", tier: 1 },
+
+            { name: "ยาไอซ์", type: "stimulant", desc: "เมทแอมเฟตามีนบริสุทธิ์", tier: 2 },
+            { name: "ฝิ่น", type: "depressant", desc: "ยางจากผลฝิ่น", tier: 2 },
+            { name: "เห็ดขี้ควาย", type: "hallucinogen", desc: "เห็ดเมา มีสารไซโลไซบิน", tier: 2 },
+            { name: "กระท่อม", type: "stimulant", desc: "เคี้ยวใบ/ต้มน้ำ", tier: 2 },
+
+            { name: "โคเคน", type: "stimulant", desc: "สกัดจากใบโคคา", tier: 3 },
+            { name: "มอร์ฟีน", type: "depressant", desc: "สกัดจากฝิ่น ใช้ทางการแพทย์", tier: 3 },
+            { name: "เฮโรอีน", type: "depressant", desc: "ผงขาว รุนแรง", tier: 3 },
+            { name: "เคตามีน", type: "hallucinogen", desc: "ยาเค หลอนประสาทรุนแรง", tier: 3 }
         ];
 
         const CATEGORIES = {
@@ -269,11 +315,56 @@
             mixed: { id: 'mixed', label: 'ผสมผสาน', color: '#22c55e', rgb: '34,197,94', x: 0.8, y: 0.75 } // Bottom Right (Green)
         };
 
+        // --- Level / Difficulty Configuration ---
+        // Difficulty ramps up in three ways as the player advances:
+        //  1. maxTier: which drug tiers are in the question pool (harder items appear later)
+        //  2. baseTime: seconds allowed to answer each question (shrinks each level)
+        //  3. hoverTime: seconds the finger must stay on a category to confirm (shrinks each level)
+        // correctToAdvance is how many correct answers are needed before leveling up.
+        const LEVELS = [
+            { level: 1, maxTier: 1, baseTime: 15.0, hoverTime: 1.0, correctToAdvance: 4, wrongPenalty: 2.0 },
+            { level: 2, maxTier: 1, baseTime: 12.0, hoverTime: 0.9, correctToAdvance: 5, wrongPenalty: 2.5 },
+            { level: 3, maxTier: 2, baseTime: 11.0, hoverTime: 0.85, correctToAdvance: 5, wrongPenalty: 2.5 },
+            { level: 4, maxTier: 2, baseTime: 9.0,  hoverTime: 0.75, correctToAdvance: 6, wrongPenalty: 3.0 },
+            { level: 5, maxTier: 3, baseTime: 8.0,  hoverTime: 0.7,  correctToAdvance: 6, wrongPenalty: 3.0 },
+            { level: 6, maxTier: 3, baseTime: 7.0,  hoverTime: 0.65, correctToAdvance: 7, wrongPenalty: 3.0 },
+            { level: 7, maxTier: 3, baseTime: 6.0,  hoverTime: 0.6,  correctToAdvance: 8, wrongPenalty: 3.5 }
+        ];
+        // Beyond the last defined level, difficulty keeps scaling slightly each level
+        // (endless mode) using these floors/steps rather than a hard cutoff.
+        const ENDLESS_TIME_FLOOR = 3.5;
+        const ENDLESS_HOVER_FLOOR = 0.45;
+        const ENDLESS_TIME_STEP = 0.3;
+        const ENDLESS_HOVER_STEP = 0.02;
+
+        function getLevelConfig(levelNum) {
+            if (levelNum <= LEVELS.length) {
+                return LEVELS[levelNum - 1];
+            }
+            // Extrapolate past the last hand-authored level for endless progression.
+            const last = LEVELS[LEVELS.length - 1];
+            const stepsBeyond = levelNum - LEVELS.length;
+            return {
+                level: levelNum,
+                maxTier: last.maxTier,
+                baseTime: Math.max(ENDLESS_TIME_FLOOR, last.baseTime - stepsBeyond * ENDLESS_TIME_STEP),
+                hoverTime: Math.max(ENDLESS_HOVER_FLOOR, last.hoverTime - stepsBeyond * ENDLESS_HOVER_STEP),
+                correctToAdvance: last.correctToAdvance + Math.min(stepsBeyond, 4),
+                wrongPenalty: last.wrongPenalty
+            };
+        }
+
+        function getDrugPoolForLevel(levelNum) {
+            const cfg = getLevelConfig(levelNum);
+            return DRUG_DATABASE.filter(d => d.tier <= cfg.maxTier);
+        }
+
         // --- Game State ---
         let state = {
             status: 'LOADING', // LOADING, MENU, PLAYING, PAUSED, GAMEOVER
             score: 0,
             level: 1,
+            correctInLevel: 0,
             timeRemaining: 15.0,
             currentDrug: null,
             baseTime: 15.0,
@@ -286,7 +377,7 @@
         let handCursor = { x: null, y: null, active: false };
         let hoverTarget = null;
         let hoverProgress = 0; // 0 to 1
-        const HOVER_TIME_REQUIRED = 0.8; // seconds
+        let HOVER_TIME_REQUIRED = 0.8; // seconds, set per-level in resetLevelTimer()
 
         // --- DOM Elements ---
         const videoElement = document.getElementById('webcam-video');
@@ -303,6 +394,25 @@
         const hudLevel = document.getElementById('hud-level');
         const hudTime = document.getElementById('hud-time');
         const finalScore = document.getElementById('final-score');
+        const finalLevel = document.getElementById('final-level');
+        const levelProgressFill = document.getElementById('level-progress-fill');
+        const levelProgressLabel = document.getElementById('level-progress-label');
+        const levelPreviewList = document.getElementById('level-preview-list');
+
+        // Populate the start-menu preview of how difficulty ramps up.
+        function renderLevelPreview() {
+            levelPreviewList.innerHTML = '';
+            LEVELS.forEach(cfg => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="text-white font-medium">เลเวล ${cfg.level}:</span> เวลา ${cfg.baseTime.toFixed(0)}s · ต้องชี้ค้าง ${cfg.hoverTime.toFixed(2)}s · ตอบถูก ${cfg.correctToAdvance} ข้อเพื่อผ่าน`;
+                levelPreviewList.appendChild(li);
+            });
+            const li = document.createElement('li');
+            li.className = 'text-gray-400 italic';
+            li.textContent = `เลเวล ${LEVELS.length + 1}+: ความยากเพิ่มขึ้นต่อเนื่องแบบไม่จำกัด`;
+            levelPreviewList.appendChild(li);
+        }
+        renderLevelPreview();
 
         // --- Audio System (Web Audio API) ---
         let audioCtx;
@@ -398,18 +508,29 @@
         }
 
         function getNextDrug() {
-            // Pick a random drug different from the current one
+            // Pick a random drug from the current level's pool, different from the current one.
+            const pool = getDrugPoolForLevel(state.level);
             let newDrug;
             do {
-                newDrug = DRUG_DATABASE[Math.floor(Math.random() * DRUG_DATABASE.length)];
-            } while (state.currentDrug && newDrug.name === state.currentDrug.name);
+                newDrug = pool[Math.floor(Math.random() * pool.length)];
+            } while (pool.length > 1 && state.currentDrug && newDrug.name === state.currentDrug.name);
             return newDrug;
         }
 
         function resetLevelTimer() {
-            // Difficulty curve: Less time in higher levels
-            state.baseTime = Math.max(3.0, 15.0 - (state.level - 1) * 2.0);
-            state.timeRemaining = state.baseTime;
+            // Difficulty curve driven by the LEVELS config: less time and a stricter
+            // hover-confirm window at higher levels.
+            const cfg = getLevelConfig(state.level);
+            state.baseTime = cfg.baseTime;
+            state.timeRemaining = cfg.baseTime;
+            HOVER_TIME_REQUIRED = cfg.hoverTime;
+        }
+
+        function updateLevelProgressUI() {
+            const cfg = getLevelConfig(state.level);
+            const pct = Math.min(100, (state.correctInLevel / cfg.correctToAdvance) * 100);
+            levelProgressFill.style.width = pct + '%';
+            levelProgressLabel.textContent = `${state.correctInLevel} / ${cfg.correctToAdvance} ถูกต้อง เพื่อขึ้นเลเวลถัดไป`;
         }
 
         // --- MediaPipe Setup ---
@@ -578,32 +699,41 @@
         }
 
         function checkAnswer(selectedCategoryId) {
+            const cfg = getLevelConfig(state.level);
+
             if (state.currentDrug.type === selectedCategoryId) {
                 // Correct!
                 playSound('correct');
                 state.score += 10;
+                state.correctInLevel++;
                 hudScore.innerText = state.score;
                 
                 const cat = CATEGORIES[selectedCategoryId];
                 spawnParticles(cat.x * canvasElement.width, cat.y * canvasElement.height, cat.rgb);
                 showFeedback("ถูกต้อง!", "#4ade80");
 
-                // Level up logic
-                if (state.score % 50 === 0) {
+                // Level up once enough correct answers are logged for this level.
+                if (state.correctInLevel >= cfg.correctToAdvance) {
                     state.level++;
+                    state.correctInLevel = 0;
                     hudLevel.innerText = state.level;
                     playSound('levelup');
                     showFeedback(`LEVEL ${state.level}!`, "#60a5fa");
+                    resetLevelTimer(); // pick up new level's time/hover settings
+                } else {
+                    // Keep remaining time for this level's pace, but re-cap to the
+                    // level's base time so early mistakes don't snowball.
+                    state.timeRemaining = Math.min(state.timeRemaining + cfg.baseTime * 0.3, cfg.baseTime);
                 }
 
+                updateLevelProgressUI();
                 state.currentDrug = getNextDrug();
-                resetLevelTimer();
                 hoverProgress = 0;
                 hoverTarget = null;
             } else {
                 // Wrong!
                 playSound('wrong');
-                state.timeRemaining -= 3; // Penalty
+                state.timeRemaining -= cfg.wrongPenalty; // Penalty scales with level
                 showFeedback("ผิดหมวดหมู่!", "#f87171");
                 
                 // Visual shake effect could be added here
@@ -754,11 +884,13 @@
             state.status = 'PLAYING';
             state.score = 0;
             state.level = 1;
+            state.correctInLevel = 0;
             state.currentDrug = getNextDrug();
             resetLevelTimer();
             
             hudScore.innerText = state.score;
             hudLevel.innerText = state.level;
+            updateLevelProgressUI();
             
             startMenu.classList.add('hidden-ui');
             gameOverMenu.classList.add('hidden-ui');
@@ -788,6 +920,7 @@
             state.status = 'GAMEOVER';
             document.getElementById('game-over-reason').innerText = reason;
             finalScore.innerText = state.score;
+            finalLevel.innerText = state.level;
             
             gameOverMenu.classList.remove('hidden-ui');
             hud.style.display = 'none';
