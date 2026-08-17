@@ -1,1070 +1,824 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ภารกิจพิทักษ์เยาวชน — เกม AR แยกประเภทยาเสพติด</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg-void:#070B14;
-    --bg-deep:#0C1526;
-    --bg-panel:rgba(16,26,46,.72);
-    --line-cyan:#22D3C8;
-    --line-cyan-soft:rgba(34,211,200,.35);
-    --ok:#34D399;
-    --warn:#FBBF24;
-    --danger:#F87171;
-    --ink:#E8EFF7;
-    --ink-dim:#93A4C0;
-    --cat-depressant:#818CF8;
-    --cat-stimulant:#FBBF24;
-    --cat-hallucinogen:#F472B6;
-    --cat-mixed:#34D399;
-    --radius-lg:22px;
-    --radius-md:14px;
-    --font-display:'Kanit',sans-serif;
-    --font-body:'Sarabun',sans-serif;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{
-    margin:0; padding:0; width:100%; height:100%; overflow:hidden;
-    background:var(--bg-void); color:var(--ink); font-family:var(--font-body);
-    -webkit-user-select:none; user-select:none;
-  }
-  #app{position:fixed; inset:0; width:100%; height:100%;}
-
-  /* ---------- ambient backdrop (behind everything) ---------- */
-  .void-grid{
-    position:fixed; inset:0; z-index:0;
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(34,211,200,.14), transparent 60%),
-      linear-gradient(rgba(34,211,200,.055) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34,211,200,.055) 1px, transparent 1px);
-    background-size:auto, 42px 42px, 42px 42px;
-    background-color:var(--bg-void);
-  }
-
-  /* ---------- generic screen overlay ---------- */
-  .screen{
-    position:fixed; inset:0; z-index:20;
-    display:flex; align-items:center; justify-content:center;
-    padding:24px;
-  }
-  .hidden{display:none !important;}
-
-  .panel{
-    width:min(620px, 100%);
-    background:var(--bg-panel);
-    border:1px solid var(--line-cyan-soft);
-    border-radius:var(--radius-lg);
-    padding:38px 34px 32px;
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-    box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04);
-    position:relative;
-    overflow:hidden;
-  }
-  .panel::before{
-    content:"";
-    position:absolute; inset:0;
-    background:linear-gradient(120deg, transparent 40%, rgba(34,211,200,.08) 50%, transparent 60%);
-    pointer-events:none;
-  }
-  .eyebrow{
-    font-family:var(--font-display); font-weight:600; letter-spacing:.22em;
-    font-size:15px; color:var(--line-cyan); text-transform:uppercase;
-    display:flex; align-items:center; gap:8px; margin-bottom:10px;
-  }
-  .eyebrow::before{content:""; width:18px; height:1px; background:var(--line-cyan);}
-  h1.title{
-    font-family:var(--font-display); font-weight:800; font-size:clamp(32px,6.4vw,46px);
-    line-height:1.15; margin:0 0 8px;
-    background:linear-gradient(92deg,#fff, var(--line-cyan) 70%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-  }
-  .sub{color:var(--ink-dim); font-size:18px; margin:0 0 24px; line-height:1.65;}
-
-  .rules{list-style:none; margin:0 0 28px; padding:0; display:flex; flex-direction:column; gap:16px;}
-  .rules li{
-    display:flex; gap:14px; align-items:flex-start; font-size:18px; line-height:1.5; color:var(--ink);
-  }
-  .rules .num{
-    flex:none; width:34px; height:34px; border-radius:50%;
-    background:rgba(34,211,200,.12); border:1px solid var(--line-cyan-soft);
-    display:flex; align-items:center; justify-content:center;
-    font-family:var(--font-display); font-size:16px; color:var(--line-cyan); font-weight:700;
-    margin-top:1px;
-  }
-
-  .btn{
-    font-family:var(--font-display); font-weight:600; font-size:20px;
-    border:none; border-radius:999px; padding:19px 26px; cursor:pointer;
-    display:inline-flex; align-items:center; justify-content:center; gap:10px;
-    width:100%; transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
-  }
-  .btn:active{transform:scale(.97);}
-  .btn-primary{
-    background:linear-gradient(92deg, var(--line-cyan), #5EEAD4);
-    color:#04231F; box-shadow:0 12px 30px rgba(34,211,200,.28);
-  }
-  .btn-primary:hover{filter:brightness(1.06);}
-  .btn-ghost{
-    background:rgba(255,255,255,.06); color:var(--ink); border:1px solid rgba(255,255,255,.12);
-    margin-top:10px;
-  }
-  .btn-ghost:hover{background:rgba(255,255,255,.1);}
-  .btn-danger{
-    background:rgba(248,113,113,.14); color:#FCA5A5; border:1px solid rgba(248,113,113,.35);
-    margin-top:10px;
-  }
-
-  .cam-note{
-    margin-top:18px; padding:12px 14px; border-radius:var(--radius-md);
-    background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.28);
-    font-size:15.5px; color:#FDE68A; line-height:1.6; display:flex; gap:9px;
-  }
-  .err-box{color:#FCA5A5; font-size:16px; line-height:1.6; margin:14px 0 0; padding:12px 14px;
-    background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.3); border-radius:var(--radius-md); display:none;}
-
-  /* ---------- loading ---------- */
-  .loader-ring{
-    width:64px; height:64px; margin:0 auto 20px; position:relative;
-  }
-  .loader-ring span{
-    position:absolute; inset:0; border-radius:50%;
-    border:3px solid transparent; border-top-color:var(--line-cyan);
-    animation:spin 1s linear infinite;
-  }
-  .loader-ring span:nth-child(2){border-top-color:transparent; border-right-color:rgba(34,211,200,.4); animation-duration:1.6s; animation-direction:reverse;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  .loading-text{text-align:center; font-family:var(--font-display); font-size:18px; color:var(--ink-dim); letter-spacing:.03em;}
-
-  /* ---------- game surface ---------- */
-  #stage-wrap{position:fixed; inset:0; z-index:1;}
-  video#cam{
-    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-    transform:scaleX(-1); filter:saturate(1.05) brightness(.72) contrast(1.05);
-  }
-  #vignette{
-    position:absolute; inset:0;
-    background:radial-gradient(ellipse 120% 90% at 50% 45%, transparent 45%, rgba(3,7,15,.55) 100%),
-               linear-gradient(180deg, rgba(3,7,15,.55) 0%, transparent 16%, transparent 78%, rgba(3,7,15,.72) 100%);
-    pointer-events:none;
-  }
-  canvas#fx{position:absolute; inset:0; width:100%; height:100%;}
-
-  /* corner AR brackets */
-  .bracket{position:absolute; width:34px; height:34px; border:2px solid var(--line-cyan-soft); pointer-events:none; opacity:.8;}
-  .bracket.tl{top:16px; left:16px; border-right:none; border-bottom:none; border-radius:6px 0 0 0;}
-  .bracket.tr{top:16px; right:16px; border-left:none; border-bottom:none; border-radius:0 6px 0 0;}
-  .bracket.bl{bottom:16px; left:16px; border-right:none; border-top:none; border-radius:0 0 0 6px;}
-  .bracket.br{bottom:16px; right:16px; border-left:none; border-top:none; border-radius:0 0 6px 0;}
-
-  /* ---------- HUD ---------- */
-  #hud{position:absolute; top:0; left:0; right:0; z-index:5; padding:18px 20px 0; display:flex; align-items:flex-start; justify-content:space-between; pointer-events:none;}
-  .hud-chip{
-    pointer-events:auto;
-    background:var(--bg-panel); border:1px solid var(--line-cyan-soft); border-radius:16px;
-    padding:10px 16px; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    display:flex; align-items:center; gap:10px;
-  }
-  .hud-left{display:flex; gap:10px;}
-  .hud-label{font-size:12px; letter-spacing:.13em; color:var(--ink-dim); font-family:var(--font-display); text-transform:uppercase;}
-  .hud-value{font-family:var(--font-display); font-weight:700; font-size:27px; color:var(--ink); line-height:1;}
-  .hud-value.accent{color:var(--line-cyan);}
-  .lives{display:flex; gap:7px; margin-top:5px;}
-  .life-dot{width:16px; height:16px; border-radius:4px; background:var(--danger); box-shadow:0 0 8px rgba(248,113,113,.7); transform:rotate(45deg);}
-  .life-dot.lost{background:rgba(255,255,255,.12); box-shadow:none;}
-  .hud-right{display:flex; gap:10px;}
-  .icon-btn{
-    pointer-events:auto; width:56px; height:56px; border-radius:16px;
-    background:var(--bg-panel); border:1px solid var(--line-cyan-soft); color:var(--ink);
-    display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(14px);
-  }
-  .icon-btn svg{width:25px; height:25px;}
-  .icon-btn:active{transform:scale(.94);}
-
-  /* ---------- category bins label strip (rendered mostly on canvas, this is just a hint) ---------- */
-  #calibrate-hint{
-    position:absolute; left:50%; top:16px; transform:translateX(-50%);
-    z-index:6; pointer-events:none;
-    font-family:var(--font-display); font-size:16px; color:var(--line-cyan);
-    background:rgba(7,11,20,.55); border:1px solid var(--line-cyan-soft); padding:8px 18px; border-radius:999px;
-    opacity:0; transition:opacity .4s ease;
-  }
-
-  /* ---------- pause / gameover / levelup screens reuse .panel ---------- */
-  .stat-row{display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,.1);}
-  .stat-row:last-of-type{border-bottom:none;}
-  .stat-row .k{color:var(--ink-dim); font-size:17px;}
-  .stat-row .v{font-family:var(--font-display); font-weight:700; font-size:24px; color:var(--line-cyan);}
-
-  .toast{
-    position:absolute; top:90px; left:50%; transform:translateX(-50%) translateY(-14px);
-    z-index:8; padding:12px 22px; border-radius:999px;
-    font-family:var(--font-display); font-weight:600; font-size:17px;
-    background:linear-gradient(92deg, rgba(52,211,153,.92), rgba(34,211,200,.92)); color:#04231F;
-    box-shadow:0 14px 30px rgba(34,211,200,.35);
-    opacity:0; transition:opacity .35s ease, transform .35s ease; pointer-events:none;
-  }
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-
-  #mute-icon-on{display:block;} #mute-icon-off{display:none;}
-  .muted #mute-icon-on{display:none;} .muted #mute-icon-off{display:block;}
-
-  @media (max-width:520px){
-    .panel{padding:28px 22px 24px;}
-    .hud-value{font-size:21px;}
-    .hud-chip{padding:8px 12px;}
-    .icon-btn{width:50px; height:50px;}
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Drug Prevention Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Prompt', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: white;
+        }
+        #webcam-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            /* Flip video horizontally to act like a mirror */
+            transform: scaleX(-1);
+        }
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none; /* Let clicks pass through if needed */
+        }
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            transition: opacity 0.5s ease;
+        }
+        .hidden-ui {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            font-weight: 600;
+            padding: 12px 32px;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-size: 1.25rem;
+            margin-top: 20px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.5);
+        }
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+            display: none;
+        }
+        .hud-stats {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 30px;
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .stat-label { font-size: 0.8rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        
+        .controls-layer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        .btn-icon {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        .btn-icon:hover {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.1);
+        }
+        
+        #loading-screen {
+            position: absolute;
+            z-index: 100;
+            background: #0f172a;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-<div id="app">
-  <div class="void-grid"></div>
 
-  <!-- ============ START SCREEN ============ -->
-  <div class="screen" id="screen-start">
-    <div class="panel">
-      <div class="eyebrow">AR MISSION · ป้องกันยาเสพติด</div>
-      <h1 class="title">ภารกิจพิทักษ์เยาวชน</h1>
-      <p class="sub">ใช้ฝ่ามือของคุณควบคุมเกม จับสิ่งของที่ตกลงมาแล้วแยกใส่กล่องหมวดหมู่ให้ถูกต้อง ก่อนเวลาจะหมดลง</p>
-      <ul class="rules">
-        <li><span class="num">1</span> อนุญาตให้ใช้กล้อง แล้วยกฝ่ามือขึ้นให้กล้องเห็นชัดเจน</li>
-        <li><span class="num">2</span> เลื่อนฝ่ามือไปสัมผัส "การ์ด" ที่ตกลงมาเพื่อจับไว้</li>
-        <li><span class="num">3</span> เลื่อนฝ่ามือพร้อมการ์ดไปยังกล่องหมวดหมู่ที่ตรงกันเพื่อทำคะแนน</li>
-        <li><span class="num">4</span> ใส่ผิดกล่องหรือปล่อยให้ตกพื้น จะเสียหัวใจ — ระวังให้ดี!</li>
-      </ul>
-      <button class="btn btn-primary" id="btn-start">
-        <span>เริ่มภารกิจ · เปิดกล้อง</span>
-      </button>
-      <div class="cam-note">⚠️ เกมนี้ต้องใช้กล้องเพื่อตรวจจับฝ่ามือแบบ AR ข้อมูลภาพจะถูกประมวลผลบนอุปกรณ์ของคุณเท่านั้น ไม่มีการบันทึกหรือส่งออกไปที่ใด</div>
-      <div class="err-box" id="start-err"></div>
+    <!-- Video Element (Hidden, used as source for MediaPipe and Canvas) -->
+    <video id="webcam-video" autoplay playsinline style="display: none;"></video>
+
+    <!-- Canvas for rendering game graphics and camera feed -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <h2 class="text-2xl font-semibold mt-4 text-white">กำลังเตรียมระบบ AR...</h2>
+        <p class="text-gray-400 mt-2">กรุณาอนุญาตการใช้งานกล้อง</p>
     </div>
-  </div>
 
-  <!-- ============ LOADING SCREEN ============ -->
-  <div class="screen hidden" id="screen-loading">
-    <div class="panel" style="text-align:center;">
-      <div class="loader-ring"><span></span><span></span></div>
-      <div class="loading-text" id="loading-text">กำลังเปิดกล้องและเตรียมระบบตรวจจับมือ...</div>
-    </div>
-  </div>
-
-  <!-- ============ GAME STAGE ============ -->
-  <div id="stage-wrap" class="hidden">
-    <video id="cam" autoplay playsinline muted></video>
-    <div id="vignette"></div>
-    <canvas id="fx"></canvas>
-    <div class="bracket tl"></div><div class="bracket tr"></div>
-    <div class="bracket bl"></div><div class="bracket br"></div>
-    <div id="calibrate-hint">👋 ยกฝ่ามือขึ้นให้กล้องเห็น</div>
-
-    <div id="hud">
-      <div class="hud-left">
-        <div class="hud-chip">
-          <div>
-            <div class="hud-label">ด่าน</div>
-            <div class="hud-value accent" id="hud-level">1</div>
-          </div>
-        </div>
-        <div class="hud-chip">
-          <div>
-            <div class="hud-label">คะแนน</div>
-            <div class="hud-value" id="hud-score">0</div>
-          </div>
-        </div>
-        <div class="hud-chip">
-          <div>
-            <div class="hud-label">หัวใจ</div>
-            <div class="lives" id="hud-lives">
-              <div class="life-dot"></div><div class="life-dot"></div><div class="life-dot"></div>
+    <!-- Start Menu -->
+    <div id="start-menu" class="ui-layer">
+        <div class="glass-panel">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                AR Drug Defender
+            </h1>
+            <p class="text-lg text-gray-200 mb-6">
+                เรียนรู้การแยกประเภทยาเสพติด<br>
+                <b>วิธีเล่น:</b> ใช้ "ปลายนิ้วชี้" ของคุณชี้ไปที่วงกลมหมวดหมู่ที่ถูกต้องเพื่อแยกประเภทยาเสพติดที่ปรากฏตรงกลางจอ
+            </p>
+            <div class="grid grid-cols-2 gap-4 text-sm text-left mb-8 bg-black/30 p-4 rounded-xl">
+                <div><span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span><b>กดประสาท:</b> ทำให้ง่วง ซึม</div>
+                <div><span class="inline-block w-3 h-3 rounded-full bg-yellow-400 mr-2"></span><b>กระตุ้นประสาท:</b> ตื่นตัว ใจสั่น</div>
+                <div><span class="inline-block w-3 h-3 rounded-full bg-purple-500 mr-2"></span><b>หลอนประสาท:</b> เห็นภาพหลอน</div>
+                <div><span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span><b>ผสมผสาน:</b> ออกฤทธิ์หลายแบบ</div>
             </div>
-          </div>
+            <button id="btn-start" class="btn-primary">เริ่มเกม (Start Game)</button>
         </div>
-      </div>
-      <div class="hud-right">
-        <button class="icon-btn" id="btn-mute" aria-label="เสียง">
-          <svg id="mute-icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-          <svg id="mute-icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="ui-layer hidden-ui">
+        <div class="glass-panel">
+            <h2 class="text-4xl font-bold mb-6 text-yellow-400">หยุดพักเกม</h2>
+            <button id="btn-resume" class="btn-primary mb-4 w-full">เล่นต่อ (Resume)</button>
+            <button id="btn-quit" class="btn-primary w-full" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">ออกจากเกม (Quit)</button>
+        </div>
+    </div>
+
+    <!-- Game Over Menu -->
+    <div id="game-over-menu" class="ui-layer hidden-ui">
+        <div class="glass-panel">
+            <h2 class="text-5xl font-bold mb-2 text-red-500">จบเกม!</h2>
+            <p class="text-2xl mb-6">คะแนนของคุณ: <span id="final-score" class="font-bold text-white">0</span></p>
+            <p id="game-over-reason" class="text-lg text-gray-300 mb-8">หมดเวลาตอบคำถาม</p>
+            <button id="btn-restart" class="btn-primary">เล่นอีกครั้ง (Play Again)</button>
+        </div>
+    </div>
+
+    <!-- HUD (Heads Up Display) -->
+    <div id="hud">
+        <div class="hud-stats">
+            <div class="stat-item">
+                <span class="stat-label">Level</span>
+                <span id="hud-level" class="stat-value text-blue-400">1</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Score</span>
+                <span id="hud-score" class="stat-value text-green-400">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Time</span>
+                <span id="hud-time" class="stat-value text-yellow-400">0.0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mouse Controls for Pause/Quit -->
+    <div class="controls-layer" id="controls-layer" style="display: none;">
+        <button id="btn-pause-icon" class="btn-icon" title="Pause Game">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48V208a8,8,0,0,1-8,8H160a8,8,0,0,1-8-8V48a8,8,0,0,1,8-8h48A8,8,0,0,1,216,48ZM104,40H56a8,8,0,0,0-8,8V208a8,8,0,0,0,8,8h48a8,8,0,0,0,8-8V48A8,8,0,0,0,104,40Z"></path></svg>
         </button>
-        <button class="icon-btn" id="btn-pause" aria-label="หยุดชั่วคราว">
-          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-        </button>
-      </div>
     </div>
 
-    <div class="toast" id="toast-levelup">ผ่านด่าน! ไปต่อด่านถัดไป 🎉</div>
-  </div>
+    <script>
+        
+        // --- Game Data ---
+        const DRUG_DATABASE = [
+            { name: "ยาบ้า", type: "stimulant", desc: "แอมเฟตามีน" },
+            { name: "ยาไอซ์", type: "stimulant", desc: "เมทแอมเฟตามีนบริสุทธิ์" },
+            { name: "โคเคน", type: "stimulant", desc: "สกัดจากใบโคคา" },
+            { name: "กระท่อม", type: "stimulant", desc: "เคี้ยวใบ/ต้มน้ำ" },
+            { name: "ฝิ่น", type: "depressant", desc: "ยางจากผลฝิ่น" },
+            { name: "มอร์ฟีน", type: "depressant", desc: "สกัดจากฝิ่น ใช้ทางการแพทย์" },
+            { name: "เฮโรอีน", type: "depressant", desc: "ผงขาว รุนแรง" },
+            { name: "ยานอนหลับ", type: "depressant", desc: "ใช้เกินขนาดอันตราย" },
+            { name: "แอลเอสดี (LSD)", type: "hallucinogen", desc: "กระดาษเมา/แสตมป์" },
+            { name: "เห็ดขี้ควาย", type: "hallucinogen", desc: "เห็ดเมา มีสารไซโลไซบิน" },
+            { name: "เคตามีน", type: "hallucinogen", desc: "ยาเค หลอนประสาทรุนแรง" },
+            { name: "กัญชา", type: "mixed", desc: "มีสาร THC/CBD" }
+        ];
 
-  <!-- ============ PAUSE MENU (only in-game menu) ============ -->
-  <div class="screen hidden" id="screen-pause">
-    <div class="panel" style="text-align:center;">
-      <div class="eyebrow" style="justify-content:center;">หยุดชั่วคราว</div>
-      <h1 class="title" style="font-size:32px;">พักสักครู่</h1>
-      <p class="sub">กดเล่นต่อเพื่อกลับเข้าสู่ภารกิจ หรือออกจากเกมเพื่อกลับหน้าหลัก</p>
-      <button class="btn btn-primary" id="btn-resume">เล่นต่อ</button>
-      <button class="btn btn-danger" id="btn-quit">ออกจากเกม</button>
-    </div>
-  </div>
+        const CATEGORIES = {
+            depressant: { id: 'depressant', label: 'กดประสาท', color: '#ef4444', rgb: '239,68,68', x: 0.2, y: 0.25 }, // Top Left (Red)
+            stimulant: { id: 'stimulant', label: 'กระตุ้นประสาท', color: '#eab308', rgb: '234,179,8', x: 0.8, y: 0.25 }, // Top Right (Yellow)
+            hallucinogen: { id: 'hallucinogen', label: 'หลอนประสาท', color: '#a855f7', rgb: '168,85,247', x: 0.2, y: 0.75 }, // Bottom Left (Purple)
+            mixed: { id: 'mixed', label: 'ผสมผสาน', color: '#22c55e', rgb: '34,197,94', x: 0.8, y: 0.75 } // Bottom Right (Green)
+        };
 
-  <!-- ============ GAME OVER SCREEN ============ -->
-  <div class="screen hidden" id="screen-over">
-    <div class="panel">
-      <div class="eyebrow">ภารกิจสิ้นสุด</div>
-      <h1 class="title" id="over-title" style="font-size:34px;">หมดหัวใจแล้ว</h1>
-      <p class="sub">สรุปผลการปฏิบัติภารกิจของคุณ</p>
-      <div class="stat-row"><div class="k">คะแนนรวม</div><div class="v" id="over-score">0</div></div>
-      <div class="stat-row"><div class="k">ด่านที่ไปถึง</div><div class="v" id="over-level">1</div></div>
-      <div class="stat-row"><div class="k">แยกประเภทถูกต้อง</div><div class="v" id="over-correct">0</div></div>
-      <button class="btn btn-primary" id="btn-retry" style="margin-top:22px;">เล่นใหม่อีกครั้ง</button>
-      <button class="btn btn-ghost" id="btn-home">กลับหน้าหลัก</button>
-    </div>
-  </div>
-</div>
+        // --- Game State ---
+        let state = {
+            status: 'LOADING', // LOADING, MENU, PLAYING, PAUSED, GAMEOVER
+            score: 0,
+            level: 1,
+            timeRemaining: 15.0,
+            currentDrug: null,
+            baseTime: 15.0,
+            lastFrameTime: 0,
+            particles: [],
+            feedbackText: null, // { text, color, alpha, y }
+        };
 
-<!-- MediaPipe Hands -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+        // --- Interaction State ---
+        let handCursor = { x: null, y: null, active: false };
+        let hoverTarget = null;
+        let hoverProgress = 0; // 0 to 1
+        const HOVER_TIME_REQUIRED = 0.8; // seconds
 
-<script>
-(function(){
-"use strict";
+        // --- DOM Elements ---
+        const videoElement = document.getElementById('webcam-video');
+        const canvasElement = document.getElementById('game-canvas');
+        const ctx = canvasElement.getContext('2d');
+        const loadingScreen = document.getElementById('loading-screen');
+        const startMenu = document.getElementById('start-menu');
+        const pauseMenu = document.getElementById('pause-menu');
+        const gameOverMenu = document.getElementById('game-over-menu');
+        const hud = document.getElementById('hud');
+        const controlsLayer = document.getElementById('controls-layer');
+        
+        const hudScore = document.getElementById('hud-score');
+        const hudLevel = document.getElementById('hud-level');
+        const hudTime = document.getElementById('hud-time');
+        const finalScore = document.getElementById('final-score');
 
-/* ============================================================
-   CATEGORY & CONTENT DATA
-   (จำแนกตามกลุ่มฤทธิ์ต่อระบบประสาท — เนื้อหาระดับหมวดหมู่เพื่อการศึกษาเท่านั้น)
-============================================================ */
-const CATEGORIES = [
-  { id:'depressant',    name:'กลุ่มกดประสาท',        short:'กดประสาท',   color:'#818CF8', shape:'wave',
-    items:['ฝิ่น','มอร์ฟีน','เฮโรอีน','ยานอนหลับ','เครื่องดื่มแอลกอฮอล์'] },
-  { id:'stimulant',      name:'กลุ่มกระตุ้นประสาท',   short:'กระตุ้นประสาท', color:'#FBBF24', shape:'bolt',
-    items:['แอมเฟตามีน (ยาบ้า)','เมทแอมเฟตามีนผลึก','โคเคน','ใบกระท่อม','บุหรี่ (นิโคติน)'] },
-  { id:'hallucinogen',   name:'กลุ่มหลอนประสาท',      short:'หลอนประสาท', color:'#F472B6', shape:'eye',
-    items:['กัญชา','แอลเอสดี','เห็ดขี้ควาย','สารระเหย'] },
-  { id:'mixed',          name:'กลุ่มออกฤทธิ์ผสมผสาน', short:'ผสมผสาน',   color:'#34D399', shape:'atom',
-    items:['เคตามีน','ยาอี (MDMA)','ทรามาดอลใช้ผิดวัตถุประสงค์'] },
-];
-
-/* 21-point hand skeleton connections (MediaPipe Hands topology) — used to
-   draw the AR focus outline over the player's tracked palm. */
-const HAND_LINKS = [
-  [0,1],[1,2],[2,3],[3,4],
-  [0,5],[5,6],[6,7],[7,8],
-  [5,9],[9,10],[10,11],[11,12],
-  [9,13],[13,14],[14,15],[15,16],
-  [13,17],[17,18],[18,19],[19,20],
-  [0,17]
-];
-const FINGERTIPS = [4,8,12,16,20];
-
-/* ============================================================
-   DOM SHORTCUTS
-============================================================ */
-const $ = (id)=>document.getElementById(id);
-const screens = {
-  start: $('screen-start'), loading: $('screen-loading'), pause: $('screen-pause'), over: $('screen-over')
-};
-const stageWrap = $('stage-wrap');
-const videoEl = $('cam');
-const canvas = $('fx');
-const ctx = canvas.getContext('2d');
-
-function showScreen(name){
-  Object.values(screens).forEach(s=>s.classList.add('hidden'));
-  if(name && screens[name]) screens[name].classList.remove('hidden');
-}
-
-/* ============================================================
-   AUDIO — synthesized SFX, no external files
-============================================================ */
-const Audio1 = (()=>{
-  let ctxA = null, master = null, muted = false;
-  function ensure(){
-    if(!ctxA){
-      ctxA = new (window.AudioContext||window.webkitAudioContext)();
-      master = ctxA.createGain();
-      master.gain.value = 0.5;
-      master.connect(ctxA.destination);
-    }
-    if(ctxA.state === 'suspended') ctxA.resume();
-  }
-  function tone(freq, dur, type='sine', gainStart=0.22, delay=0, glideTo=null){
-    if(muted || !ctxA) return;
-    const t0 = ctxA.currentTime + delay;
-    const osc = ctxA.createOscillator();
-    const g = ctxA.createGain();
-    osc.type = type; osc.frequency.setValueAtTime(freq, t0);
-    if(glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t0+dur);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(gainStart, t0+0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
-    osc.connect(g); g.connect(master);
-    osc.start(t0); osc.stop(t0+dur+0.02);
-  }
-  return {
-    unlock(){ ensure(); },
-    setMuted(v){ muted = v; },
-    isMuted(){ return muted; },
-    catch(){ ensure(); tone(720,0.07,'sine',0.18); },
-    correct(){ ensure(); tone(660,0.09,'triangle',0.24); tone(990,0.14,'triangle',0.2,0.08); },
-    wrong(){ ensure(); tone(180,0.22,'sawtooth',0.22,0,110); },
-    miss(){ ensure(); tone(260,0.28,'sawtooth',0.18,0,90); },
-    levelup(){ ensure(); [523,659,784,1046].forEach((f,i)=>tone(f,0.16,'triangle',0.22,i*0.09)); },
-    gameover(){ ensure(); [440,392,330,220].forEach((f,i)=>tone(f,0.3,'sine',0.2,i*0.16)); },
-    click(){ ensure(); tone(500,0.05,'square',0.08); }
-  };
-})();
-
-/* ============================================================
-   GAME STATE
-============================================================ */
-const Game = {
-  state:'start',            // start | loading | playing | paused | over
-  score:0, level:1, lives:3, correctCount:0,
-  activeCats:2,              // how many category bins are active at current level
-  items:[],                  // falling / held items
-  bins:[],                   // computed each resize
-  spawnTimer:0, spawnInterval:1700,
-  fallSpeedBase:70,          // px/sec at level1
-  lastTime:0,
-  cursor:{x:-999,y:-999, rawX:-999, rawY:-999, visible:false, holding:null, targetVisible:false},
-  handLandmarks:null,
-  handSeenOnce:false,
-  particles:[],
-  idCounter:1,
-  levelThresholds:[6,14,24,36], // correct-count needed to reach level 2,3,4,5
-};
-
-function resetGame(){
-  Game.score=0; Game.level=1; Game.lives=3; Game.correctCount=0;
-  Game.activeCats=2; Game.items=[]; Game.particles=[];
-  Game.spawnInterval=1700; Game.spawnTimer=900;
-  updateHud();
-}
-
-function updateHud(){
-  $('hud-level').textContent = Game.level;
-  $('hud-score').textContent = Game.score;
-  const dots = document.querySelectorAll('#hud-lives .life-dot');
-  dots.forEach((d,i)=> d.classList.toggle('lost', i>=Game.lives));
-}
-
-/* ============================================================
-   CANVAS SIZE / BINS LAYOUT
-============================================================ */
-function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  layoutBins();
-}
-function layoutBins(){
-  const n = Game.activeCats;
-  const cats = CATEGORIES.slice(0,n);
-  const W = canvas.width, H = canvas.height;
-  const binH = Math.max(112, H*0.16);
-  const margin = W*0.04;
-  const gap = 14;
-  const totalW = W - margin*2;
-  const binW = (totalW - gap*(n-1)) / n;
-  Game.bins = cats.map((c,i)=>({
-    cat:c,
-    x: margin + i*(binW+gap),
-    y: H - binH - 14,
-    w: binW,
-    h: binH
-  }));
-}
-window.addEventListener('resize', resize);
-
-/* ============================================================
-   MEDIAPIPE HANDS SETUP
-============================================================ */
-let hands, camera, streamRef=null;
-
-function computeCursorFromLandmarks(lm){
-  // palm center approx = average of wrist(0), index MCP(5), pinky MCP(17)
-  const p0=lm[0], p5=lm[5], p17=lm[17];
-  const nx = (p0.x + p5.x + p17.x)/3;
-  const ny = (p0.y + p5.y + p17.y)/3;
-  // mirror x because video is mirrored for a natural "AR mirror" feel
-  const mx = (1-nx) * canvas.width;
-  const my = ny * canvas.height;
-  return {x:mx, y:my};
-}
-
-function onHandsResults(results){
-  if(results.multiHandLandmarks && results.multiHandLandmarks.length>0){
-    const lm = results.multiHandLandmarks[0];
-    const p = computeCursorFromLandmarks(lm);
-    Game.cursor.rawX = p.x; Game.cursor.rawY = p.y;
-    Game.cursor.targetVisible = true;
-    Game.handLandmarks = lm.map(pt=>({x:(1-pt.x)*canvas.width, y:pt.y*canvas.height}));
-    if(!Game.handSeenOnce){ Game.handSeenOnce = true; }
-  } else {
-    Game.cursor.targetVisible = false;
-    Game.handLandmarks = null;
-  }
-}
-
-async function initHandTracking(){
-  hands = new Hands({locateFile:(file)=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`});
-  hands.setOptions({
-    maxNumHands:1, modelComplexity:0,
-    minDetectionConfidence:0.6, minTrackingConfidence:0.55
-  });
-  hands.onResults(onHandsResults);
-
-  camera = new Camera(videoEl, {
-    onFrame: async ()=>{ if(Game.state==='playing') await hands.send({image:videoEl}); },
-    width:960, height:540
-  });
-  await camera.start();
-  streamRef = videoEl.srcObject; // actual stream camera_utils attached to the video element
-}
-
-function stopCamera(){
-  try{ if(camera && camera.stop) camera.stop(); }catch(e){}
-  if(streamRef){
-    streamRef.getTracks().forEach(t=>t.stop());
-    streamRef=null;
-  }
-}
-
-/* ============================================================
-   START / FLOW
-============================================================ */
-$('btn-start').addEventListener('click', async ()=>{
-  $('start-err').style.display='none';
-  Audio1.unlock();
-  showScreen('loading');
-  $('loading-text').textContent = 'กำลังขอสิทธิ์ใช้กล้องและเตรียมระบบตรวจจับฝ่ามือ (AR)...';
-  try{
-    await initHandTracking();
-    showScreen(null);
-    stageWrap.classList.remove('hidden');
-    resize();
-    resetGame();
-    startPlaying();
-  }catch(err){
-    console.error(err);
-    showScreen('start');
-    const box = $('start-err');
-    box.style.display='block';
-    box.textContent = 'ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้งานกล้องในเบราว์เซอร์ แล้วลองใหม่อีกครั้ง';
-  }
-});
-
-function startPlaying(){
-  Game.state='playing';
-  Game.lastTime = performance.now();
-  const hint = $('calibrate-hint');
-  hint.style.opacity='1';
-  setTimeout(()=>{ if(Game.handSeenOnce) hint.style.opacity='0'; }, 3500);
-  requestAnimationFrame(loop);
-}
-
-/* ============================================================
-   PAUSE / RESUME / QUIT  (the ONLY in-game menu)
-============================================================ */
-function openPause(){
-  if(Game.state!=='playing') return;
-  Game.state='paused';
-  Audio1.click();
-  showScreen('pause');
-}
-function resumePlay(){
-  Audio1.click();
-  showScreen(null);
-  Game.state='playing';
-  Game.lastTime = performance.now();
-  requestAnimationFrame(loop);
-}
-function quitToHome(){
-  Audio1.click();
-  Game.state='start';
-  stopCamera();
-  stageWrap.classList.add('hidden');
-  showScreen('start');
-}
-$('btn-pause').addEventListener('click', openPause);
-$('btn-resume').addEventListener('click', resumePlay);
-$('btn-quit').addEventListener('click', quitToHome);
-window.addEventListener('keydown', (e)=>{
-  if(e.key==='Escape'){
-    if(Game.state==='playing') openPause();
-    else if(Game.state==='paused') resumePlay();
-  }
-});
-
-$('btn-mute').addEventListener('click', ()=>{
-  const next = !Audio1.isMuted();
-  Audio1.setMuted(next);
-  document.body.classList.toggle('muted', next);
-});
-
-$('btn-retry').addEventListener('click', ()=>{
-  Audio1.click();
-  showScreen(null);
-  resetGame();
-  Game.state='playing';
-  Game.lastTime=performance.now();
-  requestAnimationFrame(loop);
-});
-$('btn-home').addEventListener('click', quitToHome);
-
-/* ============================================================
-   ITEM SPAWNING
-============================================================ */
-function spawnItem(){
-  const n = Game.activeCats;
-  const cat = CATEGORIES[Math.floor(Math.random()*n)];
-  const label = cat.items[Math.floor(Math.random()*cat.items.length)];
-  const w = 204, h = 78;
-  const x = 40 + Math.random()*(canvas.width - 80 - w);
-  const speed = Game.fallSpeedBase + (Game.level-1)*22 + Math.random()*18;
-  Game.items.push({
-    id:Game.idCounter++, cat, label, x, y:-h-10, w, h, speed,
-    state:'falling', // falling | held | resolving
-    rot:(Math.random()*6-3),
-    bornAt:performance.now()
-  });
-}
-
-/* ============================================================
-   PARTICLES (simple burst on correct/wrong)
-============================================================ */
-function burst(x,y,color,count=16){
-  for(let i=0;i<count;i++){
-    const a = Math.random()*Math.PI*2;
-    const spd = 60+Math.random()*160;
-    Game.particles.push({
-      x,y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
-      life:1, decay:1.1+Math.random()*0.6, color, size:2+Math.random()*3
-    });
-  }
-}
-
-/* ============================================================
-   MAIN UPDATE
-============================================================ */
-function toast(msg){
-  const t = $('toast-levelup');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 1600);
-}
-
-function tryLevelUp(){
-  const idx = Game.level-1;
-  if(idx < Game.levelThresholds.length && Game.correctCount >= Game.levelThresholds[idx]){
-    Game.level++;
-    Game.activeCats = Math.max(2, Math.min(CATEGORIES.length, 2 + Math.floor((Game.level-1)*0.7)));
-    Game.spawnInterval = Math.max(650, Game.spawnInterval - 180);
-    layoutBins();
-    Audio1.levelup();
-    toast('🎉 ผ่านด่าน '+ (Game.level-1) +' → เข้าสู่ด่านที่ '+Game.level+'!');
-  }
-}
-
-function endGame(){
-  Game.state='over';
-  Audio1.gameover();
-  $('over-title').textContent = Game.lives<=0 ? 'หมดหัวใจแล้ว' : 'จบภารกิจ';
-  $('over-score').textContent = Game.score;
-  $('over-level').textContent = Game.level;
-  $('over-correct').textContent = Game.correctCount;
-  showScreen('over');
-}
-
-function update(dt){
-  // smooth cursor toward raw target
-  if(Game.cursor.targetVisible){
-    const lerp = 0.35;
-    if(Game.cursor.x < -500){ Game.cursor.x = Game.cursor.rawX; Game.cursor.y = Game.cursor.rawY; }
-    Game.cursor.x += (Game.cursor.rawX - Game.cursor.x)*lerp;
-    Game.cursor.y += (Game.cursor.rawY - Game.cursor.y)*lerp;
-    Game.cursor.visible = true;
-    const hint = $('calibrate-hint');
-    if(hint.style.opacity!=='0') hint.style.opacity='0';
-  } else {
-    Game.cursor.visible = false;
-  }
-
-  // spawn
-  Game.spawnTimer -= dt*1000;
-  if(Game.spawnTimer<=0){
-    spawnItem();
-    Game.spawnTimer = Game.spawnInterval + Math.random()*400;
-  }
-
-  const cx=Game.cursor.x, cy=Game.cursor.y, cVisible=Game.cursor.visible;
-
-  for(let i=Game.items.length-1;i>=0;i--){
-    const it = Game.items[i];
-
-    if(it.state==='falling'){
-      it.y += it.speed*dt;
-      // catch check
-      if(cVisible){
-        const dx = (it.x+it.w/2) - cx;
-        const dy = (it.y+it.h/2) - cy;
-        if(Math.sqrt(dx*dx+dy*dy) < 74){
-          it.state='held';
-          Game.cursor.holding = it;
-          Audio1.catch();
+        // --- Audio System (Web Audio API) ---
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
         }
-      }
-      if(it.y > canvas.height+10){
-        // missed
-        Game.items.splice(i,1);
-        loseLife('miss');
-        continue;
-      }
-    } else if(it.state==='held'){
-      it.x = cx - it.w/2;
-      it.y = cy - it.h/2;
-      if(!cVisible){ it.state='falling'; Game.cursor.holding=null; continue; }
-      // check bin overlap
-      const hitBin = Game.bins.find(b=> cx>b.x && cx<b.x+b.w && cy>b.y-10 && cy<b.y+b.h+20);
-      if(hitBin){
-        Game.cursor.holding=null;
-        Game.items.splice(i,1);
-        if(hitBin.cat.id === it.cat.id){
-          Game.score += 10 + (Game.level-1)*2;
-          Game.correctCount++;
-          burst(cx,cy,it.cat.color,18);
-          Audio1.correct();
-          tryLevelUp();
-        } else {
-          burst(cx,cy,'#F87171',16);
-          loseLife('wrong');
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            
+            if (type === 'correct') {
+                // Cheerful chime
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.1); // C6
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.5, now + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } else if (type === 'wrong') {
+                // Low buzz
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'hover') {
+                // subtle tick
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, now);
+                gainNode.gain.setValueAtTime(0.05, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'gameover') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 1.0);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+                osc.start(now);
+                osc.stop(now + 1.0);
+            } else if (type === 'levelup') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(554.37, now + 0.1); // C#
+                osc.frequency.setValueAtTime(659.25, now + 0.2); // E
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
         }
-        updateHud();
-      }
-    }
-  }
 
-  // particles
-  for(let i=Game.particles.length-1;i>=0;i--){
-    const p = Game.particles[i];
-    p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 260*dt;
-    p.life -= p.decay*dt;
-    if(p.life<=0) Game.particles.splice(i,1);
-  }
-}
+        // --- Utilities & Canvas Setup ---
+        function resizeCanvas() {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-function loseLife(reason){
-  Game.lives--;
-  updateHud();
-  if(reason==='wrong') Audio1.wrong(); else Audio1.miss();
-  const wrap = document.getElementById('stage-wrap');
-  wrap.style.transition='transform .08s';
-  wrap.style.transform='translateX(-6px)';
-  setTimeout(()=>{ wrap.style.transform='translateX(6px)'; },70);
-  setTimeout(()=>{ wrap.style.transform='translateX(0)'; },140);
-  if(Game.lives<=0){ endGame(); }
-}
+        function spawnParticles(x, y, colorStr) {
+            for (let i = 0; i < 20; i++) {
+                state.particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: colorStr
+                });
+            }
+        }
 
-/* ============================================================
-   RENDER
-============================================================ */
-function roundRect(x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
-}
+        function showFeedback(text, color) {
+            state.feedbackText = { text, color, alpha: 1.0, y: canvasElement.height / 2 + 50 };
+        }
 
-function hexToRgba(hex, alpha){
-  const h = hex.replace('#','');
-  const full = h.length===3 ? h.split('').map(c=>c+c).join('') : h;
-  const num = parseInt(full,16);
-  const r=(num>>16)&255, g=(num>>8)&255, b=num&255;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
+        function getNextDrug() {
+            // Pick a random drug different from the current one
+            let newDrug;
+            do {
+                newDrug = DRUG_DATABASE[Math.floor(Math.random() * DRUG_DATABASE.length)];
+            } while (state.currentDrug && newDrug.name === state.currentDrug.name);
+            return newDrug;
+        }
 
-/* Modern glass-badge icon set — one distinct glyph per category, drawn with
-   soft radial glow + gradient fill so it reads as a small "AR chip" rather
-   than a flat geometric placeholder. */
-function drawShape(type, cx, cy, r, color){
-  ctx.save();
+        function resetLevelTimer() {
+            // Difficulty curve: Less time in higher levels
+            state.baseTime = Math.max(3.0, 15.0 - (state.level - 1) * 2.0);
+            state.timeRemaining = state.baseTime;
+        }
 
-  // ambient glow disc behind the glyph
-  const halo = ctx.createRadialGradient(cx,cy,0, cx,cy, r*1.7);
-  halo.addColorStop(0, hexToRgba(color,0.32));
-  halo.addColorStop(1, hexToRgba(color,0));
-  ctx.fillStyle = halo;
-  ctx.beginPath(); ctx.arc(cx,cy,r*1.7,0,Math.PI*2); ctx.fill();
+        // --- MediaPipe Setup ---
+        const hands = new Hands({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }});
+        
+        hands.setOptions({
+            maxNumHands: 1, // Track 1 hand to keep it simple
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
 
-  // dark glass badge base
-  ctx.beginPath(); ctx.arc(cx,cy,r*1.18,0,Math.PI*2);
-  ctx.fillStyle='rgba(6,10,18,0.55)'; ctx.fill();
-  ctx.lineWidth=1.1; ctx.strokeStyle=hexToRgba(color,0.55); ctx.stroke();
+        hands.onResults(onResults);
 
-  // glyph gradient
-  const grad = ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
-  grad.addColorStop(0, '#FFFFFF');
-  grad.addColorStop(0.35, color);
-  grad.addColorStop(1, color);
-  ctx.fillStyle = grad;
-  ctx.strokeStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = r*0.9;
-  ctx.lineCap='round'; ctx.lineJoin='round';
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({image: videoElement});
+            },
+            width: 1280,
+            height: 720
+        });
 
-  if(type==='wave'){
-    // crescent moon — sedation / depressant
-    ctx.beginPath();
-    ctx.arc(cx, cy, r*0.68, Math.PI*0.15, Math.PI*1.85, false);
-    ctx.arc(cx+r*0.36, cy, r*0.56, Math.PI*1.9, Math.PI*0.1, true);
-    ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.arc(cx+r*0.62, cy-r*0.5, r*0.09,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx+r*0.86, cy-r*0.72, r*0.06,0,Math.PI*2); ctx.fill();
-  } else if(type==='bolt'){
-    // lightning bolt — stimulant
-    ctx.beginPath();
-    ctx.moveTo(cx-r*0.06, cy-r*0.9);
-    ctx.lineTo(cx-r*0.58, cy+r*0.12);
-    ctx.lineTo(cx-r*0.08, cy+r*0.12);
-    ctx.lineTo(cx-r*0.32, cy+r*0.9);
-    ctx.lineTo(cx+r*0.58, cy-r*0.14);
-    ctx.lineTo(cx+r*0.06, cy-r*0.14);
-    ctx.closePath();
-    ctx.fill();
-  } else if(type==='eye'){
-    // almond eye w/ iris — hallucinogen
-    ctx.beginPath();
-    ctx.moveTo(cx-r*0.92, cy);
-    ctx.quadraticCurveTo(cx, cy-r*0.78, cx+r*0.92, cy);
-    ctx.quadraticCurveTo(cx, cy+r*0.78, cx-r*0.92, cy);
-    ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur=0;
-    ctx.fillStyle='#080C16';
-    ctx.beginPath(); ctx.arc(cx,cy,r*0.36,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=color;
-    ctx.beginPath(); ctx.arc(cx,cy,r*0.17,0,Math.PI*2); ctx.fill();
-  } else if(type==='hex' || type==='atom'){
-    // orbiting rings around a nucleus — mixed-action
-    ctx.lineWidth = Math.max(1.3, r*0.15);
-    ctx.fillStyle='transparent';
-    [0,60,120].forEach(deg=>{
-      ctx.save();
-      ctx.translate(cx,cy); ctx.rotate(deg*Math.PI/180);
-      ctx.beginPath(); ctx.ellipse(0,0, r*0.95, r*0.4, 0, 0, Math.PI*2); ctx.stroke();
-      ctx.restore();
-    });
-    ctx.shadowBlur = r*0.6;
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.arc(cx,cy,r*0.2,0,Math.PI*2); ctx.fill();
-  } else {
-    ctx.beginPath(); ctx.arc(cx,cy,r*0.7,0,Math.PI*2); ctx.fill();
-  }
-  ctx.restore();
-}
+        // Start camera and clear loading screen when ready
+        camera.start().then(() => {
+            loadingScreen.style.display = 'none';
+            state.status = 'MENU';
+        }).catch(err => {
+            alert("ไม่สามารถเข้าถึงกล้องได้ กรุณาตรวจสอบการอนุญาตใช้งานกล้อง: " + err);
+        });
 
-/* AR focus outline over the tracked palm — skeleton lines + joints + a
-   camera-style bounding frame with corner brackets, so the player can see
-   exactly what the system is reading from their hand. */
-function drawHandSkeleton(){
-  const lm = Game.handLandmarks;
-  if(!lm || !Game.cursor.visible) return;
-  const col = Game.cursor.holding ? '#34D399' : '#22D3C8';
+        function onResults(results) {
+            // This runs every time MediaPipe processes a frame
+            if (state.status !== 'PLAYING') return;
 
-  ctx.save();
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                // Get index finger tip (landmark 8)
+                const indexTip = results.multiHandLandmarks[0][8];
+                
+                // Coordinates are normalized [0, 1]. 
+                // X is flipped because we mirror the video display.
+                handCursor.x = (1 - indexTip.x) * canvasElement.width; 
+                handCursor.y = indexTip.y * canvasElement.height;
+                handCursor.active = true;
+            } else {
+                handCursor.active = false;
+                hoverTarget = null;
+                hoverProgress = 0;
+            }
+        }
 
-  // skeleton connections
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = hexToRgba(col, 0.5);
-  ctx.shadowColor = col; ctx.shadowBlur = 6;
-  HAND_LINKS.forEach(([a,b])=>{
-    ctx.beginPath();
-    ctx.moveTo(lm[a].x, lm[a].y);
-    ctx.lineTo(lm[b].x, lm[b].y);
-    ctx.stroke();
-  });
-  ctx.shadowBlur = 0;
+        // --- Game Render Loop ---
+        function drawRoundedRect(ctx, x, y, width, height, radius, fillStyle) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            if (fillStyle) {
+                ctx.fillStyle = fillStyle;
+                ctx.fill();
+            }
+        }
 
-  // joints — fingertips glow brighter than knuckles
-  lm.forEach((p,i)=>{
-    const tip = FINGERTIPS.includes(i);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, tip?4.2:2.3, 0, Math.PI*2);
-    ctx.fillStyle = tip ? col : hexToRgba(col,0.75);
-    if(tip){ ctx.shadowColor=col; ctx.shadowBlur=8; }
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  });
+        function gameLoop(timestamp) {
+            const dt = (timestamp - state.lastFrameTime) / 1000 || 0;
+            state.lastFrameTime = timestamp;
 
-  // bounding focus frame around the whole hand
-  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-  lm.forEach(p=>{
-    if(p.x<minX)minX=p.x; if(p.y<minY)minY=p.y;
-    if(p.x>maxX)maxX=p.x; if(p.y>maxY)maxY=p.y;
-  });
-  const pad = 20;
-  minX-=pad; minY-=pad; maxX+=pad; maxY+=pad;
-  const bl = 14;
-  ctx.lineWidth = 2; ctx.strokeStyle = hexToRgba(col,0.85);
-  [[minX,minY,1,1],[maxX,minY,-1,1],[maxX,maxY,-1,-1],[minX,maxY,1,-1]].forEach(([cx0,cy0,sx,sy])=>{
-    ctx.beginPath();
-    ctx.moveTo(cx0, cy0+sy*bl);
-    ctx.lineTo(cx0, cy0);
-    ctx.lineTo(cx0+sx*bl, cy0);
-    ctx.stroke();
-  });
+            // Clear canvas
+            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-  ctx.font = "600 14px Kanit, sans-serif";
-  ctx.fillStyle = hexToRgba(col,0.9);
-  ctx.textAlign='left'; ctx.textBaseline='bottom';
-  ctx.fillText(Game.cursor.holding ? 'กำลังถือไอเทม' : 'กำลังติดตามมือ', minX+2, minY-6);
+            // 1. Draw webcam feed as background (Mirrored)
+            ctx.save();
+            ctx.scale(-1, 1);
+            // Draw video taking up the whole screen, maintaining aspect ratio usually handled by object-fit in css, 
+            // but in canvas we calculate it to fill.
+            const vRatio = canvasElement.width / videoElement.videoWidth;
+            const hRatio = canvasElement.height / videoElement.videoHeight;
+            const ratio  = Math.max(vRatio, hRatio);
+            const centerShift_x = (canvasElement.width - videoElement.videoWidth*ratio) / 2;
+            const centerShift_y = (canvasElement.height - videoElement.videoHeight*ratio) / 2;  
+            
+            // Note: because we scaled -1, x position must be negated and adjusted
+            ctx.drawImage(videoElement, 0,0, videoElement.videoWidth, videoElement.videoHeight,
+                        -canvasElement.width, 0, canvasElement.width, canvasElement.height); // simple fill
+            ctx.restore();
 
-  ctx.restore();
-}
+            // Darken background slightly for better AR contrast
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+            ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
-function render(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+            if (state.status === 'PLAYING') {
+                updatePlayingState(dt);
+                drawPlayingState();
+            } else if (state.status === 'PAUSED') {
+                drawPausedOverlay();
+            }
 
-  // bins
-  Game.bins.forEach(b=>{
-    const isTargeted = Game.cursor.visible && Game.cursor.holding &&
-      Game.cursor.x>b.x && Game.cursor.x<b.x+b.w && Game.cursor.y>b.y-10 && Game.cursor.y<b.y+b.h+20;
-    ctx.save();
-    ctx.globalAlpha = isTargeted ? 1 : 0.88;
-    roundRect(b.x,b.y,b.w,b.h,16);
-    ctx.fillStyle = 'rgba(10,16,28,0.62)';
-    ctx.fill();
-    ctx.lineWidth = isTargeted?3:1.6;
-    ctx.strokeStyle = b.cat.color;
-    ctx.shadowColor = b.cat.color;
-    ctx.shadowBlur = isTargeted?26:10;
-    ctx.stroke();
-    ctx.shadowBlur=0;
-    drawShape(b.cat.shape, b.x+34, b.y+b.h/2, 19, b.cat.color);
-    ctx.fillStyle='#EAF2FB';
-    ctx.font='600 '+Math.max(17,Math.min(22,b.w*0.09))+'px Kanit, sans-serif';
-    ctx.textBaseline='middle';
-    wrapText(b.cat.name, b.x+66, b.y+b.h/2, b.w-78, 21);
-    ctx.restore();
-  });
+            // Draw particles universally
+            drawParticles(dt);
+            drawFeedback(dt);
 
-  // items
-  Game.items.forEach(it=>{
-    ctx.save();
-    ctx.translate(it.x+it.w/2, it.y+it.h/2);
-    ctx.rotate((it.state==='held'?0:it.rot)*Math.PI/180);
-    roundRect(-it.w/2,-it.h/2,it.w,it.h,14);
-    ctx.fillStyle='rgba(12,18,32,0.86)';
-    ctx.fill();
-    ctx.lineWidth = it.state==='held'?2.6:1.8;
-    ctx.strokeStyle = it.cat.color;
-    ctx.shadowColor = it.cat.color;
-    ctx.shadowBlur = it.state==='held'?22:8;
-    ctx.stroke();
-    ctx.shadowBlur=0;
-    drawShape(it.cat.shape, -it.w/2+26, 0, 13, it.cat.color);
-    ctx.fillStyle='#EAF2FB';
-    ctx.font='600 16.5px Sarabun, sans-serif';
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText(it.label, -it.w/2+50, 1, it.w-64);
-    ctx.restore();
-  });
+            requestAnimationFrame(gameLoop);
+        }
 
-  // particles
-  Game.particles.forEach(p=>{
-    ctx.globalAlpha = Math.max(0,p.life);
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
-  });
-  ctx.globalAlpha=1;
+        function updatePlayingState(dt) {
+            // Update Timer
+            state.timeRemaining -= dt;
+            if (state.timeRemaining <= 0) {
+                endGame("หมดเวลาตอบคำถาม!");
+                return;
+            }
+            hudTime.innerText = state.timeRemaining.toFixed(1);
 
-  // hand cursor / reticle — camera-focus style AR bracket
-  drawHandSkeleton();
-  if(Game.cursor.visible){
-    const {x,y,holding} = Game.cursor;
-    const col = holding ? '#34D399' : '#22D3C8';
-    const t = performance.now();
-    ctx.save();
+            // Change color based on time left
+            if (state.timeRemaining < 3) hudTime.className = "stat-value text-red-500";
+            else if (state.timeRemaining < 6) hudTime.className = "stat-value text-yellow-400";
+            else hudTime.className = "stat-value text-white";
 
-    // soft core glow
-    const g = ctx.createRadialGradient(x,y,0,x,y,34);
-    g.addColorStop(0, hexToRgba(col,0.28));
-    g.addColorStop(1, hexToRgba(col,0));
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,34,0,Math.PI*2); ctx.fill();
+            // Hover Logic
+            if (handCursor.active) {
+                let isHoveringSomething = false;
+                
+                // Calculate circle sizes based on screen size
+                const circleRadius = Math.min(canvasElement.width, canvasElement.height) * 0.12;
 
-    // thin rotating outer ring, dashed
-    ctx.save();
-    ctx.translate(x,y); ctx.rotate((t/2600)%(Math.PI*2));
-    ctx.strokeStyle=hexToRgba(col,0.55); ctx.lineWidth=1.4;
-    ctx.setLineDash([4,6]);
-    ctx.beginPath(); ctx.arc(0,0,26,0,Math.PI*2); ctx.stroke();
-    ctx.restore();
+                for (const key in CATEGORIES) {
+                    const cat = CATEGORIES[key];
+                    const cx = cat.x * canvasElement.width;
+                    const cy = cat.y * canvasElement.height;
+                    
+                    const dist = Math.hypot(handCursor.x - cx, handCursor.y - cy);
+                    
+                    if (dist < circleRadius) {
+                        isHoveringSomething = true;
+                        if (hoverTarget !== key) {
+                            hoverTarget = key;
+                            hoverProgress = 0;
+                            playSound('hover');
+                        }
+                        
+                        hoverProgress += dt / HOVER_TIME_REQUIRED;
+                        
+                        if (hoverProgress >= 1.0) {
+                            checkAnswer(key);
+                        }
+                        break; // Only hover one at a time
+                    }
+                }
+                
+                if (!isHoveringSomething) {
+                    hoverTarget = null;
+                    hoverProgress = 0;
+                }
+            } else {
+                hoverTarget = null;
+                hoverProgress = 0;
+            }
+        }
 
-    // expanding pulse ring when idle, tightening when holding
-    const pulse = holding ? 22 : 22 + (Math.sin(t/230)+1)*6;
-    ctx.strokeStyle=col; ctx.lineWidth=1.6; ctx.globalAlpha=0.55; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(x,y,pulse,0,Math.PI*2); ctx.stroke();
+        function checkAnswer(selectedCategoryId) {
+            if (state.currentDrug.type === selectedCategoryId) {
+                // Correct!
+                playSound('correct');
+                state.score += 10;
+                hudScore.innerText = state.score;
+                
+                const cat = CATEGORIES[selectedCategoryId];
+                spawnParticles(cat.x * canvasElement.width, cat.y * canvasElement.height, cat.rgb);
+                showFeedback("ถูกต้อง!", "#4ade80");
 
-    // four corner focus brackets
-    ctx.globalAlpha=1; ctx.lineWidth=2.4; ctx.strokeStyle=col;
-    ctx.shadowColor=col; ctx.shadowBlur=10;
-    const bl=9, off=15;
-    [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([sx,sy])=>{
-      ctx.beginPath();
-      ctx.moveTo(x+sx*off, y+sy*(off-bl));
-      ctx.lineTo(x+sx*off, y+sy*off);
-      ctx.lineTo(x+sx*(off-bl), y+sy*off);
-      ctx.stroke();
-    });
-    ctx.shadowBlur=0;
+                // Level up logic
+                if (state.score % 50 === 0) {
+                    state.level++;
+                    hudLevel.innerText = state.level;
+                    playSound('levelup');
+                    showFeedback(`LEVEL ${state.level}!`, "#60a5fa");
+                }
 
-    // center dot
-    ctx.fillStyle=col;
-    ctx.beginPath(); ctx.arc(x,y,holding?3.4:2.4,0,Math.PI*2); ctx.fill();
+                state.currentDrug = getNextDrug();
+                resetLevelTimer();
+                hoverProgress = 0;
+                hoverTarget = null;
+            } else {
+                // Wrong!
+                playSound('wrong');
+                state.timeRemaining -= 3; // Penalty
+                showFeedback("ผิดหมวดหมู่!", "#f87171");
+                
+                // Visual shake effect could be added here
+                hoverProgress = 0; // reset progress to try again
+            }
+        }
 
-    ctx.restore();
-  }
-}
+        function drawPlayingState() {
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+            const circleRadius = Math.min(w, h) * 0.12;
 
-function wrapText(text,x,y,maxWidth,lineHeight){
-  const words = text.split(' ');
-  let line=''; const lines=[];
-  for(let n=0;n<words.length;n++){
-    const test = line + words[n] + ' ';
-    if(ctx.measureText(test).width > maxWidth && n>0){ lines.push(line); line = words[n]+' '; }
-    else line = test;
-  }
-  lines.push(line);
-  const startY = y - (lines.length-1)*lineHeight/2;
-  lines.forEach((l,i)=> ctx.fillText(l.trim(), x, startY + i*lineHeight));
-}
+            // 1. Draw Categories (Circles in 4 areas)
+            ctx.lineWidth = 4;
+            for (const key in CATEGORIES) {
+                const cat = CATEGORIES[key];
+                const cx = cat.x * w;
+                const cy = cat.y * h;
+                
+                // Outer glow
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = cat.color;
+                
+                // Background circle
+                ctx.beginPath();
+                ctx.arc(cx, cy, circleRadius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${cat.rgb}, 0.2)`;
+                ctx.fill();
+                ctx.strokeStyle = cat.color;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
 
-/* ============================================================
-   LOOP
-============================================================ */
-function loop(now){
-  if(Game.state!=='playing') return;
-  const dt = Math.min(0.05, (now-Game.lastTime)/1000);
-  Game.lastTime = now;
-  update(dt);
-  render();
-  requestAnimationFrame(loop);
-}
+                // Draw Hover Progress Arc
+                if (hoverTarget === key && hoverProgress > 0) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, circleRadius + 10, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * hoverProgress));
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 8;
+                    ctx.stroke();
+                    ctx.lineWidth = 4;
+                }
 
-/* initial sizing before camera starts, so layout isn't 0x0 */
-resize();
+                // Text
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 24px Prompt';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(cat.label, cx, cy);
+            }
 
-})();
-</script>
+            // 2. Draw Current Question (Center Screen)
+            if (state.currentDrug) {
+                const centerX = w / 2;
+                const centerY = h / 2;
+
+                // Draw glassmorphism box
+                const boxW = 400;
+                const boxH = 150;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                drawRoundedRect(ctx, centerX - boxW/2, centerY - boxH/2, boxW, boxH, 20, 'rgba(15, 23, 42, 0.7)');
+                ctx.shadowBlur = 0;
+                
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 40px Prompt';
+                ctx.fillText(state.currentDrug.name, centerX, centerY - 10);
+                
+                ctx.fillStyle = '#94a3b8'; // text-slate-400
+                ctx.font = '20px Prompt';
+                ctx.fillText(state.currentDrug.desc, centerX, centerY + 35);
+            }
+
+            // 3. Draw Hand Cursor (Index Finger)
+            if (handCursor.active) {
+                ctx.beginPath();
+                ctx.arc(handCursor.x, handCursor.y, 15, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.8)'; // blue-500
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(handCursor.x, handCursor.y, 25, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else {
+                // Notify user if hand is lost
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+                ctx.font = 'bold 20px Prompt';
+                ctx.textAlign = 'center';
+                ctx.fillText("ไม่พบมือของคุณ กรุณายกมือขึ้นหน้ากล้อง", w/2, h - 50);
+            }
+        }
+
+        function drawParticles(dt) {
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                let p = state.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= dt * 1.5; // decay
+
+                if (p.life <= 0) {
+                    state.particles.splice(i, 1);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 5 * p.life, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${p.color}, ${p.life})`;
+                    ctx.fill();
+                }
+            }
+        }
+
+        function drawFeedback(dt) {
+            if (state.feedbackText) {
+                let f = state.feedbackText;
+                f.y -= dt * 50; // float up
+                f.alpha -= dt * 0.8; // fade out
+
+                if (f.alpha <= 0) {
+                    state.feedbackText = null;
+                } else {
+                    ctx.save();
+                    ctx.fillStyle = f.color;
+                    ctx.globalAlpha = f.alpha;
+                    ctx.font = 'bold 40px Prompt';
+                    ctx.textAlign = 'center';
+                    // Draw outline for visibility
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 4;
+                    ctx.strokeText(f.text, canvasElement.width/2, f.y);
+                    ctx.fillText(f.text, canvasElement.width/2, f.y);
+                    ctx.restore();
+                }
+            }
+        }
+
+        function drawPausedOverlay() {
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+        }
+
+        // --- State Transitions ---
+        function startGame() {
+            initAudio();
+            state.status = 'PLAYING';
+            state.score = 0;
+            state.level = 1;
+            state.currentDrug = getNextDrug();
+            resetLevelTimer();
+            
+            hudScore.innerText = state.score;
+            hudLevel.innerText = state.level;
+            
+            startMenu.classList.add('hidden-ui');
+            gameOverMenu.classList.add('hidden-ui');
+            hud.style.display = 'block';
+            controlsLayer.style.display = 'block';
+        }
+
+        function pauseGame() {
+            if (state.status === 'PLAYING') {
+                state.status = 'PAUSED';
+                pauseMenu.classList.remove('hidden-ui');
+                hud.style.display = 'none';
+                controlsLayer.style.display = 'none';
+            }
+        }
+
+        function resumeGame() {
+            initAudio();
+            state.status = 'PLAYING';
+            pauseMenu.classList.add('hidden-ui');
+            hud.style.display = 'block';
+            controlsLayer.style.display = 'block';
+        }
+
+        function endGame(reason) {
+            playSound('gameover');
+            state.status = 'GAMEOVER';
+            document.getElementById('game-over-reason').innerText = reason;
+            finalScore.innerText = state.score;
+            
+            gameOverMenu.classList.remove('hidden-ui');
+            hud.style.display = 'none';
+            controlsLayer.style.display = 'none';
+        }
+
+        function quitToMenu() {
+            state.status = 'MENU';
+            pauseMenu.classList.add('hidden-ui');
+            gameOverMenu.classList.add('hidden-ui');
+            startMenu.classList.remove('hidden-ui');
+        }
+
+        // --- Event Listeners (Mouse only for UI) ---
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-pause-icon').addEventListener('click', pauseGame);
+        document.getElementById('btn-resume').addEventListener('click', resumeGame);
+        document.getElementById('btn-quit').addEventListener('click', quitToMenu);
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+
+        // Allow ESC key to pause
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (state.status === 'PLAYING') pauseGame();
+                else if (state.status === 'PAUSED') resumeGame();
+            }
+        });
+
+        // Start the render loop
+        requestAnimationFrame(gameLoop);
+
+    </script>
 </body>
 </html>
